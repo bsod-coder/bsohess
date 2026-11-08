@@ -1,11 +1,10 @@
 plugins {
     alias(libs.plugins.android.application)
-    alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
 android {
     namespace = "com.bsshod.chess"
-    compileSdk = 35
+    compileSdk = 37
     defaultConfig {
         applicationId = "com.bsshod.chess"
         minSdk = 31
@@ -19,7 +18,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions { jvmTarget = "17" }
 }
 dependencies {
     implementation(platform(libs.compose.bom))
