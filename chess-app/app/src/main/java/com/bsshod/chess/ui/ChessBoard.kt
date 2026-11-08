@@ -12,6 +12,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
@@ -97,8 +98,13 @@ fun ChessBoard() {
                 .pointerInput(flipped, revision, selected) { detectTapGestures { p -> at(p)?.let(::chooseTarget) } }
                 .pointerInput(flipped, revision) {
                     detectDragGestures(
-                        onDragStart = { p -> dragFrom = at(p); selected = dragFrom; dragPosition = p },
-                        onDragEnd = { at(dragPosition)?.let(::chooseTarget); dragFrom = null },
+                        onDragStart = { p ->
+                            val from = at(p)
+                            dragFrom = from?.takeIf { board.getPiece(it).pieceSide == board.sideToMove }
+                            selected = dragFrom
+                            dragPosition = p
+                        },
+                        onDragEnd = { if (dragFrom != null) at(dragPosition)?.let(::chooseTarget); dragFrom = null },
                         onDragCancel = { dragFrom = null; selected = null },
                         onDrag = { change, amount -> change.consume(); dragPosition += amount }
                     )
@@ -108,13 +114,21 @@ fun ChessBoard() {
                     val piece = remember(fen, square) { board.getPiece(square) }
                     val light = (row + column) % 2 == 0
                     val marked = lastMove?.let { it.from == square || it.to == square } == true || selected == square
-                    val highlight by animateFloatAsState(if (marked) 0.38f else 0f, label = "highlight")
+                    val highlight by animateFloatAsState(
+                        if (marked) 0.38f else 0f,
+                        animationSpec = MaterialTheme.motionScheme.fastEffectsSpec(), label = "highlight"
+                    )
+                    val isDestination = selected != null && legal.any { it.from == selected && it.to == square }
+                    val dotScale by animateFloatAsState(
+                        if (isDestination) 1f else 0f,
+                        animationSpec = MaterialTheme.motionScheme.fastSpatialSpec(), label = "legal move"
+                    )
                     Box(Modifier.offset(x = size * column, y = size * row).size(size)
                         .background(if (light) Color(0xFFE6EAD9) else Color(0xFF788E6B))
                         .background(Color(0xFFFFD568).copy(alpha = highlight)), contentAlignment = Alignment.Center) {
-                        if (selected != null && legal.any { it.from == selected && it.to == square }) {
-                            Box(Modifier.size(if (piece == Piece.NONE) 12.dp else 34.dp).background(Color.Black.copy(alpha = 0.22f), CircleShape))
-                        }
+                        Box(Modifier.size(if (piece == Piece.NONE) 12.dp else 34.dp)
+                            .graphicsLayer { scaleX = dotScale; scaleY = dotScale; alpha = dotScale.coerceIn(0f, 1f) }
+                            .background(Color.Black.copy(alpha = 0.22f), CircleShape))
                         if (piece != Piece.NONE && dragFrom != square) {
                             Text(piece.fanSymbol, fontSize = (size.value * 0.7f).sp, textAlign = TextAlign.Center, color = Color.Black)
                         }
